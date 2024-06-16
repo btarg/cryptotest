@@ -1,5 +1,5 @@
 import { encryptAndAssignHash } from './encryption.js';
-import { handleDownload } from './decrypt-worker.js';
+import { handleDownload } from './decryption.js';
 
 document.getElementById('decryptButton').addEventListener('click', async () => {
     const fileInput = document.getElementById('encryptInput');
