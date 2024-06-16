@@ -38,7 +38,7 @@ export function bufToBn(buf) {
     return BigInt('0x' + hex.join(''));
 }
 
-async function bufferToHex(buffer) {
+export function bufferToHex(buffer) {
     return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
 }
 
