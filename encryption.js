@@ -1,4 +1,4 @@
-import { getCryptoKeyFromRawKey, bufToBn, bnToBuf, merge } from './CryptoUtils.js';
+import { getCryptoKeyFromRawKey } from './CryptoUtils.js';
 
 function getFileType(fileName) {
     return {
@@ -8,29 +8,37 @@ function getFileType(fileName) {
     };
 }
 
-async function generateEncryptedBlob(file, subtleIv, keyString) {
-    // Key import
+export async function encryptChunk(chunk, iv, keyString) {
     var subtleKey = await getCryptoKeyFromRawKey(keyString);
+    const encrypted_content = await crypto.subtle.encrypt(
+        {
+            name: 'AES-CTR',
+            counter: iv,
+            length: 128,
+        },
+        subtleKey,
+        chunk,
+    )
+    const output = new Uint8Array(iv.byteLength + encrypted_content.byteLength)
+    output.set(iv)
+    output.set(new Uint8Array(encrypted_content), iv.byteLength)
+    return output
+}
 
-    // Plaintext import
-    var plaintext = new Uint8Array(await file.arrayBuffer());
-
-    // Encrypt and concat
-    var length = plaintext.byteLength;
-    var chunkSize = 128; // chunkSize in bytes
-    var index = 0;
-    var chunks = [];
-    var aesCounter = bufToBn(subtleIv);
-    do {
-        var newCount = aesCounter + BigInt(index / 16); // index / 16 = number of blocks
-        var encrypted = await window.crypto.subtle.encrypt({ name: "AES-CTR", counter: bnToBuf(newCount), length: 128 }, subtleKey, plaintext.slice(index, index + chunkSize)); // length in bits
-        chunks.push(new Uint8Array(encrypted));
-        index += chunkSize;
-    } while (index < length);
-    var mergedChunks = merge(chunks);
+export async function generateEncryptedBlob(file, iv, keyString) {
+    const chunk_size = 1024 * 1024;
+    const originalSize = file.byteLength;
+    const chunks = Math.ceil(originalSize / chunk_size);
+    const encryptedSize = chunks * 16 + originalSize;
+    const encrypted = new Uint8Array(encryptedSize);
+    for (let i = 0; i < chunks; i++) {
+        const offset = i * (16 + chunk_size);
+        const chunk = file.subarray(i * chunk_size, (i + 1) * chunk_size);
+        encrypted.set(await encryptChunk(chunk, iv, keyString), offset);
+    }
 
     // Return encrypted file
-    return new Blob([mergedChunks], { type: file.type });
+    return new Blob([encrypted], { type: file.type });
 }
 
 export async function encryptAndAssignHash(file, keyString) {
