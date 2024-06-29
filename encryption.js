@@ -8,33 +8,42 @@ function getFileType(fileName) {
     };
 }
 
-export async function encryptChunk(chunk, iv, keyString) {
-    var subtleKey = await getCryptoKeyFromRawKey(keyString);
+export async function encryptChunk(chunk, key_encoded) {
+    const iv = crypto.getRandomValues(new Uint8Array(16))
+    console.log("IV ", iv, " of length ", iv.byteLength);
     const encrypted_content = await crypto.subtle.encrypt(
         {
             name: 'AES-CTR',
             counter: iv,
             length: 128,
         },
-        subtleKey,
+        key_encoded,
         chunk,
     )
-    const output = new Uint8Array(iv.byteLength + encrypted_content.byteLength)
-    output.set(iv)
-    output.set(new Uint8Array(encrypted_content), iv.byteLength)
-    return output
+    const output = new Uint8Array(iv.byteLength + encrypted_content.byteLength);
+    output.set(iv);
+    output.set(new Uint8Array(encrypted_content), iv.byteLength);
+    return output;
 }
 
-export async function generateEncryptedBlob(file, iv, keyString) {
+
+/**
+ * @param {Uint8Array} file
+ * @param {CryptoKey} subtleKey
+ * @returns {Blob}
+ */
+export async function generateEncryptedBlob(file, subtleKey) {
     const chunk_size = 1024 * 1024;
     const originalSize = file.byteLength;
     const chunks = Math.ceil(originalSize / chunk_size);
+    console.log("Encrypting file of size", originalSize, "in", chunks, "chunks");
     const encryptedSize = chunks * 16 + originalSize;
     const encrypted = new Uint8Array(encryptedSize);
     for (let i = 0; i < chunks; i++) {
         const offset = i * (16 + chunk_size);
         const chunk = file.subarray(i * chunk_size, (i + 1) * chunk_size);
-        encrypted.set(await encryptChunk(chunk, iv, keyString), offset);
+        console.log("Encrypting chunk", i, "of", chunks, "at offset", offset);
+        encrypted.set(await encryptChunk(chunk, subtleKey), offset);
     }
 
     // Return encrypted file
@@ -42,9 +51,10 @@ export async function generateEncryptedBlob(file, iv, keyString) {
 }
 
 export async function encryptAndAssignHash(file, keyString) {
-    let iv = crypto.getRandomValues(new Uint8Array(16));
-    const initialIV = new Uint8Array(iv);
-    const encryptedFile = await generateEncryptedBlob(file, initialIV, keyString);
+
+    const subtleKey = await getCryptoKeyFromRawKey(keyString);
+    const fileArrayBuffer = await file.arrayBuffer();
+    const encryptedFile = await generateEncryptedBlob(new Uint8Array(fileArrayBuffer), subtleKey);
 
     const arrayBuffer = await encryptedFile.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest("SHA-1", arrayBuffer);
@@ -56,6 +66,5 @@ export async function encryptAndAssignHash(file, keyString) {
     encryptedFile.filehash = fileHash;
     encryptedFile.filename = file.name;
     encryptedFile.filetype = fileType;
-    encryptedFile.iv = initialIV;
     return encryptedFile;
 }

@@ -1,21 +1,20 @@
 import { encryptAndAssignHash } from './encryption.js';
-import { handleDownload } from './decryption.js';
+import { decryptFile } from './decryption.js';
 
 document.getElementById('decryptButton').addEventListener('click', async () => {
     const fileInput = document.getElementById('encryptInput');
     const file = fileInput.files[0];
-    const ivInput = document.getElementById('ivInput');
-    const ivString = ivInput.value;
-    const keyString = 'my-secret-key';
-    await handleDownload(file, ivString, keyString);
+    const passwordInput = document.getElementById('passwordInput');
+    const keyString = passwordInput.value;
+    await decryptFile(file, keyString);
 });
 
 document.getElementById('encryptButton').addEventListener('click', async () => {
     const fileInput = document.getElementById('encryptInput');
     const file = fileInput.files[0];
-    const keyString = 'my-secret-key';
+    const passwordInput = document.getElementById('passwordInput');
+    const keyString = passwordInput.value;
     const encryptedFile = await encryptAndAssignHash(file, keyString);
-    console.log("Initial IV: " + encryptedFile.iv);
     // save the encrypted file
     const downloadLink = document.createElement('a');
     downloadLink.href = URL.createObjectURL(encryptedFile);
