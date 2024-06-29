@@ -44,7 +44,7 @@ export async function generateEncryptedBlob(file, iv, keyString) {
 export async function encryptAndAssignHash(file, keyString) {
     let iv = crypto.getRandomValues(new Uint8Array(16));
     const initialIV = new Uint8Array(iv);
-    const encryptedFile = await generateEncryptedBlob(file, initialIV, keyString); // add await here
+    const encryptedFile = await generateEncryptedBlob(file, initialIV, keyString);
 
     const arrayBuffer = await encryptedFile.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest("SHA-1", arrayBuffer);
