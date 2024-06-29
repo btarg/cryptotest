@@ -56,8 +56,8 @@ export async function encryptAndAssignHash(file, keyString) {
     const fileArrayBuffer = await file.arrayBuffer();
     const encryptedFile = await generateEncryptedBlob(new Uint8Array(fileArrayBuffer), subtleKey);
 
-    const arrayBuffer = await encryptedFile.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest("SHA-1", arrayBuffer);
+    // get hash of original file not the encrypted file
+    const hashBuffer = await crypto.subtle.digest("SHA-1", fileArrayBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const fileHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     console.log("File hash:", fileHash);
